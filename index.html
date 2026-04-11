@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>何がどうした</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #1a1a2e; color: #fff;
+    min-height: 100vh; display: flex;
+    flex-direction: column; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .screen {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; width: 100%; height: 100vh;
+    padding: 20px; overflow-y: auto;
+  }
+  .screen.active { display: flex; }
+
+  h1 { font-size: 2.2rem; font-weight: 900; text-align: center; margin-bottom: 6px; }
+  h2 { font-size: 1.1rem; margin-bottom: 14px; text-align: center; color: #ccc; }
+
+  .btn {
+    padding: 13px 28px; border: none; border-radius: 50px;
+    font-size: 1rem; font-weight: bold; cursor: pointer;
+    transition: transform 0.1s; margin: 5px;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary   { background: #6c63ff; color: #fff; }
+  .btn-secondary { background: #2a2a4a; color: #aaa; border: 1px solid #3a3a5a; }
+  .btn-outline   { background: transparent; border: 2px solid #6c63ff55; color: #9b94ff; }
+  .btn-teal      { background: #00b894; color: #fff; }
+  .btn-orange    { background: #e17055; color: #fff; }
+
+  #playerList { width: 100%; max-width: 420px; margin-bottom: 12px; }
+  .player-input { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+  .player-input input {
+    flex: 1; padding: 11px 14px; border-radius: 10px;
+    border: 1px solid #3a3a5a; background: #16213e; color: #fff;
+    font-size: 1rem; outline: none;
+  }
+  .player-input input:focus { border-color: #6c63ff55; }
+  .remove-btn {
+    background: #3a1a2a; border: none; color: #e07090;
+    width: 30px; height: 30px; border-radius: 50%;
+    font-size: 1rem; cursor: pointer; flex-shrink: 0;
+  }
+
+  .setting-box {
+    width: 100%; max-width: 420px; background: #16213e;
+    border-radius: 14px; padding: 16px; margin-bottom: 14px;
+    border: 1px solid #2a2a4a;
+  }
+  .setting-box h3 { font-size: 0.88rem; color: #9b94ff; margin-bottom: 12px; font-weight: bold; }
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; font-size: 0.85rem; color: #aaa;
+  }
+  .setting-row:last-child { margin-bottom: 0; }
+  .setting-row input[type=range] { width: 120px; accent-color: #6c63ff; }
+  .setting-val { color: #6c63ff; min-width: 40px; text-align: right; font-weight: bold; }
+
+  #passScreen { background: #0d0d1f; }
+  .pass-name { color: #fff; font-size: 2rem; font-weight: 900; margin: 10px 0; }
+
+  .card-label {
+    font-size: 0.72rem; letter-spacing: 0.12em;
+    margin-bottom: 6px; text-align: center; font-weight: bold;
+  }
+  .card-label.nani-label    { color: #74b9ff; }
+  .card-label.doshita-label { color: #fd79a8; }
+
+  .flip-card {
+    width: 100%; border-radius: 18px; cursor: pointer;
+    perspective: 800px; margin-bottom: 8px;
+  }
+  .flip-card-inner {
+    position: relative; width: 100%; min-height: 90px;
+    transition: transform 0.5s; transform-style: preserve-3d;
+  }
+  .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+  .flip-card-front, .flip-card-back {
+    position: absolute; width: 100%; min-height: 90px;
+    border-radius: 18px; backface-visibility: hidden;
+    display: flex; align-items: center; justify-content: center;
+    padding: 18px 16px; text-align: center; font-weight: bold;
+    flex-direction: column; gap: 4px;
+  }
+  .flip-card-front {
+    background: linear-gradient(135deg,#2a2a4a,#1a1a35);
+    border: 2px solid #3a3a5a; color: #444; font-size: 1.3rem;
+  }
+  .tap-hint { font-size: 0.65rem; color: #3a3a5a; margin-top: 4px; }
+  .nani-back {
+    background: linear-gradient(135deg,#0984e3,#74b9ff);
+    transform: rotateY(180deg); font-size: 1.3rem; color: #fff;
+  }
+  .doshita-back {
+    background: linear-gradient(135deg,#e84393,#fd79a8);
+    transform: rotateY(180deg); font-size: 1.3rem; color: #fff;
+  }
+  .hidden-back {
+    background: linear-gradient(135deg,#2d3436,#636e72);
+    border: 2px dashed #555; transform: rotateY(180deg);
+    font-size: 1rem; color: #888;
+  }
+  .card-type-tag {
+    font-size: 0.62rem; letter-spacing: 0.1em; opacity: 0.85;
+    display: block; margin-bottom: 3px;
+  }
+  .nani-card {
+    background: linear-gradient(135deg,#0984e3,#74b9ff);
+    color: #fff; border-radius: 16px; padding: 18px 16px;
+    font-size: 1.2rem; font-weight: bold; text-align: center;
+    width: 100%; margin-bottom: 8px; line-height: 1.4;
+  }
+  .doshita-card {
+    background: linear-gradient(135deg,#e84393,#fd79a8);
+    color: #fff; border-radius: 16px; padding: 18px 16px;
+    font-size: 1.2rem; font-weight: bold; text-align: center;
+    width: 100%; margin-bottom: 8px; line-height: 1.4;
+  }
+
+  .timer-circle {
+    width: 110px; height: 110px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 14px auto; position: relative;
+  }
+  .timer-svg { position: absolute; top:0; left:0; transform: rotate(-90deg); }
+  .timer-bg   { fill:none; stroke:#2a2a4a; stroke-width:8; }
+  .timer-prog { fill:none; stroke:#6c63ff; stroke-width:8; stroke-linecap:round; transition: stroke-dashoffset 1s linear; }
+  .timer-prog.danger { stroke:#e17055; }
+  .timer-inner {
+    width:86px; height:86px; border-radius:50%;
+    background:#16213e; display:flex; align-items:center;
+    justify-content:center; font-size:1.9rem; font-weight:900; z-index:1;
+  }
+  .timer-inner.danger { color:#e17055; }
+  .talk-ended-badge {
+    background:#00b894; color:#fff; border-radius:20px;
+    padding:6px 20px; font-size:0.88rem; font-weight:bold;
+    display:inline-block; margin:10px 0;
+  }
+
+  .accuse-grid {
+    display: grid; grid-template-columns: repeat(2,1fr);
+    gap: 10px; width:100%; max-width:420px; margin-bottom:14px;
+  }
+  .accuse-btn {
+    padding:18px 10px; border-radius:14px; border:2px solid #3a3a5a;
+    background:#16213e; color:#fff; font-size:1rem; font-weight:bold;
+    cursor:pointer; transition:all 0.18s; text-align:center;
+  }
+  .accuse-btn:active { transform:scale(0.97); }
+  .accuse-btn.selected { border-color:#6c63ff; background:#6c63ff22; }
+
+  .accuse-turn-info {
+    width:100%; max-width:420px; background:#16213e;
+    border-radius:12px; padding:10px 16px; margin-bottom:12px;
+    font-size:0.85rem; color:#aaa;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .accuse-turn-badge {
+    padding:3px 12px; border-radius:20px;
+    font-size:0.78rem; font-weight:bold;
+    background:#6c63ff; color:#fff;
+  }
+
+  .guess-card-hidden {
+    background: linear-gradient(135deg,#2a2a4a,#1a1a35);
+    border: 2px dashed #3a3a5a; border-radius:14px;
+    padding:20px; font-size:2rem; margin:8px 0;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:6px; cursor:pointer;
+    transition: all 0.2s; width:100%;
+  }
+  .guess-card-hidden:hover { border-color:#6c63ff55; }
+  .guess-tap-label { font-size:0.7rem; color:#555; }
+  .guess-card-revealed-nani {
+    background:linear-gradient(135deg,#0984e3,#74b9ff);
+    border-radius:14px; padding:20px; font-size:1.2rem;
+    font-weight:bold; color:#fff; margin:8px 0; width:100%;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .guess-card-revealed-doshita {
+    background:linear-gradient(135deg,#e84393,#fd79a8);
+    border-radius:14px; padding:20px; font-size:1.2rem;
+    font-weight:bold; color:#fff; margin:8px 0; width:100%;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+
+  .score-section {
+    width:100%; max-width:420px; background:#16213e;
+    border-radius:16px; padding:14px; margin-bottom:14px;
+    border:1px solid #2a2a4a;
+  }
+  .score-title { font-size:0.72rem; color:#666; text-align:center; margin-bottom:10px; letter-spacing:0.12em; }
+  .score-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 0; border-bottom:1px solid #2a2a4a; font-size:0.9rem;
+  }
+  .score-row:last-child { border-bottom:none; }
+
+  .result-banner {
+    width:100%; max-width:420px; border-radius:18px;
+    padding:22px; margin-bottom:14px; text-align:center;
+  }
+  .result-banner.maji-win { background:linear-gradient(135deg,#1a3a2a,#0d2a1a); border:2px solid #00b894; }
+  .result-banner.late-win { background:linear-gradient(135deg,#2d1b4a,#1a1a35); border:2px solid #6c63ff; }
+  .result-title { font-size:1.5rem; font-weight:900; margin-bottom:8px; }
+  .result-desc  { font-size:0.88rem; color:#ccc; line-height:1.7; }
+
+  .accuse-history {
+    width:100%; max-width:420px; background:#16213e;
+    border-radius:14px; padding:14px; margin-bottom:14px;
+    border:1px solid #2a2a4a;
+  }
+  .accuse-history-title { font-size:0.72rem; color:#888; margin-bottom:10px; text-align:center; }
+  .accuse-history-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:6px 0; border-bottom:1px solid #2a2a4a; font-size:0.85rem;
+  }
+  .accuse-history-row:last-child { border-bottom:none; }
+  .ok-badge { color:#00b894; font-weight:bold; font-size:0.78rem; }
+  .ng-badge { color:#e17055; font-weight:bold; font-size:0.78rem; }
+
+  .rule-box {
+    width:100%; max-width:420px; background:#16213e;
+    border-radius:14px; padding:14px; margin-bottom:14px;
+    font-size:0.82rem; color:#888; line-height:2; border:1px solid #2a2a4a;
+  }
+  .rule-box b { color:#9b94ff; }
+
+  #resultScreen { overflow-y:auto; justify-content:flex-start; padding-top:16px; padding-bottom:40px; }
+  #guessScreen  { overflow-y:auto; justify-content:flex-start; padding-top:16px; padding-bottom:40px; }
+  #scoreScreen  { overflow-y:auto; justify-content:flex-start; padding-top:20px; padding-bottom:40px; }
+  #setupScreen  { overflow-y:auto; justify-content:flex-start; padding-top:20px; padding-bottom:40px; }
+  #accuseScreen { overflow-y:auto; justify-content:flex-start; padding-top:16px; padding-bottom:20px; }
+</style>
+</head>
+<body>
+
+<!-- タイトル -->
+<div id="titleScreen" class="screen active">
+  <h1>
+    <span style="color:#74b9ff;">何が</span><br>
+    <span style="color:#fd79a8;">どうした</span>
+  </h1>
+  <p style="color:#555;font-size:0.85rem;margin:12px 0 24px;">組み合わせで笑いを生むゲーム</p>
+  <button class="btn btn-primary" onclick="showSetup()">はじめる</button>
+  <button class="btn btn-secondary" onclick="showScoreScreen()" style="margin-top:4px;">スコアを見る</button>
+</div>
+
+<!-- 設定 -->
+<div id="setupScreen" class="screen">
+  <h2>⚙️ ゲーム設定</h2>
+  <div id="playerList"></div>
+  <button class="btn btn-outline" onclick="addPlayer()" style="margin-bottom:16px;">＋ プレイヤー追加</button>
+  <div class="setting-box">
+    <h3>⏱️ タイマー設定</h3>
+    <div class="setting-row">
+      <span>1人あたりの秒数</span>
+      <input type="range" id="secPerPerson" min="5" max="30" value="10" oninput="updateTimerPreview()">
+      <span class="setting-val" id="secPerPersonVal">10秒</span>
+    </div>
+    <div class="setting-row">
+      <span>トーク時間（目安）</span>
+      <span id="totalTimePreview" style="color:#6c63ff;font-weight:bold;">--秒</span>
+    </div>
+  </div>
+  <div class="rule-box">
+    <b>ルール</b><br>
+    🎴 「何が」「どうした」カードを引く<br>
+    👁️ 遅刻メンバーはランダム決定・片方だけ選んで見る<br>
+    ⏱️ みんなでトークタイム<br>
+    🔍 マジメンバーだと思う人を順番に指名<br>
+    　　刺された人が次に指名する<br>
+    🏆 遅刻メンバーが最後まで残ったらマジメンバーの勝ち<br>
+    😈 途中で遅刻メンバーが指名されたら遅刻メンバーの勝ち<br>
+    <span style="color:#555;font-size:0.75rem;">勝ったチームに1点ずつ</span>
+  </div>
+  <button class="btn btn-primary" onclick="startGame()">ゲーム開始！</button>
+  <button class="btn btn-secondary" onclick="showScreen('titleScreen')" style="margin-top:4px;">← 戻る</button>
+</div>
+
+<!-- パス -->
+<div id="passScreen" class="screen">
+  <p style="color:#444;font-size:0.82rem;margin-bottom:8px;">次の人に渡してください</p>
+  <div class="pass-name" id="passName"></div>
+  <p style="color:#444;font-size:0.78rem;margin-top:6px;">の番です</p>
+  <br>
+  <button class="btn btn-primary" onclick="onPassReady()">準備できた ✓</button>
+</div>
+
+<!-- 遅刻メンバー：カード選択 -->
+<div id="lateChoiceScreen" class="screen">
+  <p style="font-size:0.82rem;color:#888;margin-bottom:6px;" id="lateChoiceName"></p>
+  <div style="background:#e1705522;border:1px solid #e1705544;border-radius:12px;padding:12px 16px;margin-bottom:20px;text-align:center;">
+    <p style="font-size:0.88rem;color:#e17055;font-weight:bold;">あなたは遅刻メンバーです</p>
+    <p style="font-size:0.78rem;color:#aaa;margin-top:4px;">どちらのカードを見るか選んでください</p>
+  </div>
+  <div style="width:100%;max-width:400px;display:flex;flex-direction:column;gap:12px;">
+    <button onclick="selectLateCard('nani')" style="padding:20px;border-radius:16px;border:2px solid #74b9ff;background:linear-gradient(135deg,#0984e322,#74b9ff11);color:#74b9ff;font-size:1.1rem;font-weight:bold;cursor:pointer;">
+      🟦 「何が」を見る
+    </button>
+    <button onclick="selectLateCard('doshita')" style="padding:20px;border-radius:16px;border:2px solid #fd79a8;background:linear-gradient(135deg,#e8439322,#fd79a811);color:#fd79a8;font-size:1.1rem;font-weight:bold;cursor:pointer;">
+      🟪 「どうした」を見る
+    </button>
+  </div>
+</div>
+
+<!-- カード確認 -->
+<div id="cardViewScreen" class="screen">
+  <p style="font-size:0.82rem;color:#888;margin-bottom:2px;" id="cardViewName"></p>
+  <p style="font-size:0.75rem;color:#555;margin-bottom:14px;" id="cardViewSub"></p>
+  <div style="width:100%;max-width:400px;" id="cardViewContent"></div>
+  <p style="font-size:0.72rem;color:#444;margin-top:8px;text-align:center;">確認したら次の人に渡してください</p>
+  <button class="btn btn-primary" style="margin-top:14px;" onclick="onCardConfirmed()">確認した ✓</button>
+</div>
+
+<!-- トークタイム -->
+<div id="talkScreen" class="screen">
+  <h2>💬 トークタイム！</h2>
+  <p style="font-size:0.82rem;color:#888;margin-bottom:2px;">みんなで話し合おう！</p>
+  <p style="font-size:0.75rem;color:#555;margin-bottom:14px;" id="talkTimeInfo"></p>
+  <div class="timer-circle">
+    <svg class="timer-svg" width="110" height="110" viewBox="0 0 110 110">
+      <circle class="timer-bg" cx="55" cy="55" r="46"/>
+      <circle class="timer-prog" id="timerProg" cx="55" cy="55" r="46"
+        stroke-dasharray="289" stroke-dashoffset="0"/>
+    </svg>
+    <div class="timer-inner" id="timerInner"><span id="timerNum">--</span></div>
+  </div>
+  <div id="talkEndedArea" style="display:none;text-align:center;">
+    <div class="talk-ended-badge">⏰ タイム！</div>
+    <p style="font-size:0.82rem;color:#aaa;margin-top:6px;">準備ができたら次へ進んでください</p>
+  </div>
+  <button class="btn btn-teal" id="talkNextBtn" style="display:none;margin-top:10px;" onclick="startAccuse()">指名フェーズへ →</button>
+  <button class="btn btn-secondary" id="talkSkipBtn" onclick="skipTalk()" style="margin-top:8px;">スキップ</button>
+</div>
+
+<!-- 指名フェーズ -->
+<div id="accuseScreen" class="screen">
+  <h2>🔍 指名フェーズ</h2>
+  <div class="accuse-turn-info">
+    <span style="font-weight:bold;" id="accuseTurnPlayer"></span>
+    <span class="accuse-turn-badge" id="accuseTurnBadge"></span>
+  </div>
+  <p style="font-size:0.82rem;color:#888;margin-bottom:4px;text-align:center;">マジメンバーだと思う人を指名！</p>
+  <p style="font-size:0.75rem;color:#555;margin-bottom:12px;text-align:center;">指名された人が次に指名します</p>
+  <div class="accuse-grid" id="accuseGrid"></div>
+  <div id="accuseWarn" style="color:#e17055;font-size:0.82rem;margin-bottom:8px;text-align:center;"></div>
+  <button class="btn btn-orange" id="accuseConfirmBtn" disabled onclick="confirmAccuse()">この人を指名！</button>
+</div>
+
+<!-- お題当てチャレンジ -->
+<div id="guessScreen" class="screen">
+  <h2 id="guessTitleText" style="margin-bottom:6px;"></h2>
+  <p style="font-size:0.82rem;color:#888;margin-bottom:16px;text-align:center;" id="guessSubText"></p>
+  <div id="latePlayerLabel" style="font-size:0.82rem;color:#aaa;margin-bottom:12px;text-align:center;"></div>
+  <div style="width:100%;max-width:420px;margin-bottom:6px;">
+    <p style="font-size:0.72rem;color:#888;margin-bottom:4px;text-align:center;">あなたが見ていたカード</p>
+    <div id="seenCard"></div>
+  </div>
+  <div style="width:100%;max-width:420px;margin-bottom:8px;">
+    <p style="font-size:0.72rem;color:#888;margin-bottom:4px;text-align:center;">見ていないカード（タップで答えを見る）</p>
+    <div id="guessHiddenCardWrap" onclick="revealGuessCard()" style="cursor:pointer;"></div>
+  </div>
+  <p style="font-size:0.75rem;color:#555;margin-bottom:16px;text-align:center;">↑ めくる前にみんなで予想しよう！</p>
+  <button class="btn btn-primary" onclick="goToResult()">結果発表へ →</button>
+</div>
+
+<!-- 結果 -->
+<div id="resultScreen" class="screen">
+  <h2 style="margin-bottom:14px;">🎊 結果！</h2>
+  <div id="resultBanner" class="result-banner"></div>
+  <div style="width:100%;max-width:420px;margin-bottom:14px;">
+    <p style="font-size:0.72rem;color:#888;margin-bottom:8px;text-align:center;letter-spacing:0.1em;">今回のお題</p>
+    <div class="nani-card"><span class="card-type-tag">何が</span><span id="resultNaniText"></span></div>
+    <div class="doshita-card"><span class="card-type-tag">どうした</span><span id="resultDoshitaText"></span></div>
+  </div>
+  <div class="accuse-history">
+    <div class="accuse-history-title">指名の流れ</div>
+    <div id="accuseHistoryRows"></div>
+  </div>
+  <div class="score-section">
+    <div class="score-title">今回の得点</div>
+    <div id="roundScoreRows"></div>
+  </div>
+  <button class="btn btn-primary" onclick="nextRound()">もう一回！</button>
+  <button class="btn btn-secondary" onclick="showScoreScreen()" style="margin-top:4px;">累計スコアを見る</button>
+  <button class="btn btn-secondary" onclick="resetAll()" style="margin-top:4px;">最初から</button>
+</div>
+
+<!-- スコア -->
+<div id="scoreScreen" class="screen">
+  <h2 style="margin-bottom:14px;">📊 累計スコア</h2>
+  <div class="score-section">
+    <div class="score-title">TOTAL SCORE</div>
+    <div id="totalScoreRows"></div>
+  </div>
+  <div style="width:100%;max-width:420px;background:#16213e;border-radius:14px;padding:14px;margin-bottom:14px;border:1px solid #2a2a4a;">
+    <div style="font-size:0.72rem;color:#888;margin-bottom:10px;text-align:center;">直近のラウンド履歴</div>
+    <div id="roundHistoryRows"></div>
+  </div>
+  <button class="btn btn-primary" onclick="nextRound()">続ける</button>
+  <button class="btn btn-secondary" onclick="resetAll()" style="margin-top:4px;">最初から</button>
+</div>
+
+<script>
+const NANI_CARDS = [
+  // 職業
+  "社長が","部長が","新入社員が","パート主婦が","フリーターが",
+  "警備員が","清掃員が","タクシー運転手が","宅配ドライバーが","工場作業員が",
+  "コンビニ店員が","スーパーのレジ係が","居酒屋の店長が","ラーメン屋の大将が","すし職人が",
+  "八百屋のおじさんが","魚屋のおじさんが","パン屋のお姉さんが","ケーキ屋のマダムが","肉屋のおじさんが",
+  "美容師が","理容師が","ネイリストが","マッサージ師が","エステティシャンが",
+  "医者が","歯医者が","看護師が","薬剤師が","救急隊員が",
+  "先生が","塾講師が","保育士が","幼稚園の先生が","学校の用務員が",
+  "弁護士が","検察官が","裁判官が","税理士が","司法書士が",
+  "大工が","電気工事士が","配管工が","左官職人が","屋根職人が",
+  "漁師が","農家のおじさんが","牧場主が","猟師が","林業の人が",
+  "消防士が","警察官が","自衛隊員が","海上保安官が","刑事が",
+  "パイロットが","客室乗務員が","船長が","郵便配達員が","ガス会社の人が",
+  "バスの運転手が","電車の車掌が","水道屋さんが","引越し業者が","警備の人が",
+
+  // 個性的な人
+  "よく遅刻する人が","いつも早く来すぎる人が","絶対謝らない人が","なぜかモテる人が",
+  "空気を読めない人が","いつも話が長い人が","やたら元気な人が","なぜか出世する人が",
+  "会議で絶対居眠りする人が","毎回飲みすぎる人が","なぜか怒られない人が",
+  "自称天才が","自称イケメンが","自称美女が","自称グルメが","自称旅人が",
+  "意識高い系の人が","ミニマリストが","片付けられない人が","断捨離しすぎた人が",
+  "ゲーム廃人が","アニメオタクが","鉄道オタクが","城オタクが","歴史マニアが",
+  "筋トレ依存症の人が","サウナ好きのおじさんが","マラソンおじさんが","釣りバカが","山男が",
+  "毎朝5時に起きる人が","24時間寝れる人が","いつもギリギリの人が","超慎重な人が",
+  "なんでもSNSに載せる人が","写真を撮りまくる人が","絶対映えを意識する人が",
+
+  // 年代・家族
+  "おじいちゃんが","おばあちゃんが","お父さんが","お母さんが","長男が",
+  "長女が","末っ子が","一人っ子が","双子の兄が","双子の妹が",
+  "反抗期の中学生が","就活生が","新社会人が","育休中のパパが","子育て中のママが",
+  "定年退職したおじさんが","年金暮らしのおじいちゃんが","受験生が","浪人生が","留学生が",
+
+  // ファンタジー・架空
+  "魔法使いが","忍者が","侍が","海賊が","魔王が",
+  "勇者が","賢者が","騎士が","錬金術師が","占い師が",
+  "探偵が","怪盗が","スパイが","ハッカーが","傭兵が",
+  "神様が","悪魔が","天使が","閻魔大王が","福の神が",
+  "サンタクロースが","魔女が","妖精が","宇宙人が","ロボットが",
+  "ゾンビが","吸血鬼が","人魚が","龍が","ユニコーンが",
+
+  // 動物（メジャー）
+  "猫が","犬が","ハムスターが","うさぎが","インコが",
+  "金魚が","カメが","文鳥が","チワワが","柴犬が",
+  "トイプードルが","ゴールデンレトリバーが","秋田犬が","ハスキー犬が",
+  "ライオンが","トラが","チーターが","ゾウが","キリンが",
+  "カバが","パンダが","コアラが","カンガルーが","ゴリラが",
+  "クマが","キツネが","タヌキが","オオカミが","シカが",
+  "ペンギンが","フラミンゴが","フクロウが","カラスが","スズメが",
+  "ワシが","タカが","オウムが","サメが","クジラが",
+  "イルカが","タコが","カニが","クラゲが","ヘビが",
+  "カブトムシが","クワガタが","バッタが","カマキリが","ミツバチが",
+  "アリが","蚊が","ゴリラの大群が","野良猫の群れが","カラスの群れが",
+
+  // ユーモア・シュール系
+  "ゴキブリホイホイに捕まったゴキブリが","ゴキブリホイホイから逃げ切ったゴキブリが",
+  "Amazonの段ボールに入った人が","ダンボールの中の猫が",
+  "財布を拾ったけど中身が空だった人が","宝くじを買い忘れた人が",
+  "傘を忘れた日に大雨だった人が","傘を持ってきたのに晴れた人が",
+  "寝違えたまま出社した人が","靴を左右逆に履いたまま気づかなかった人が",
+  "ずっとミュートのままだった人が","ビデオ会議に寝巻きで参加した人が",
+  "エレベーターで二人きりになった人が","知り合いに似た人を追いかけた人が",
+  "スーパーの試食を5回食べた人が","回転寿司で同じネタを10皿頼んだ人が",
+  "終電を逃してカラオケで朝を迎えた人が","終電に乗ったけど乗り過ごした人が",
+  "自動ドアが開かなかった人が","くしゃみを我慢しすぎた人が",
+  "深夜2時にカップラーメンを食べた人が","ダイエット中にケーキを丸ごと食べた人が",
+  "YouTubeを5分見るつもりが6時間経っていた人が","スマホを充電し忘れて外出した人が",
+  "上司の悪口を上司に送った人が","誤字に気づかずメールを一斉送信した人が",
+  "カラオケで音程を外し続けた人が","ボウリングで全部ガーターだった人が",
+  "おみくじで大凶を引いた人が","厄年が始まった人が",
+  "筋トレした後に揚げ物を食べた人が","禁酒を宣言した翌日に飲んだ人が",
+  "鍵を閉めたか不安で3回確認した人が","財布を家に忘れて取りに帰った人が",
+  "プールで泳げないのに飛び込んだ人が","スキー初心者で上級コースに迷い込んだ人が",
+];
+
+const DOSHITA_CARDS = [
+  // 日常の失敗
+  "財布を忘れた","鍵を忘れた","スマホを忘れた","名前を忘れた","全部忘れた",
+  "遅刻した","早退した","寝坊した","二度寝した","三度寝した",
+  "道に迷った","乗り換えを間違えた","終電を逃した","傘を忘れた","土砂降りに当たった",
+  "靴を左右逆に履いたまま外出した","シャツを裏表逆に着ていた",
+  "ネクタイを忘れて出社した","寝違えて首が回らなくなった","つまずいて転んだ",
+  "階段を踏み外した","くしゃみが止まらなくなった","しゃっくりが1時間続いた",
+
+  // 変な行動
+  "急にダンスし始めた","急に歌い始めた","急に泣き始めた","急に笑い始めた","急に走り出した",
+  "壁に話しかけた","植物に謝った","自販機にお礼を言った","エレベーターに挨拶した","ATMにお辞儀した",
+  "ひとりごとが止まらなくなった","鏡に話しかけた","夢の続きを現実でやろうとした",
+  "突然英語しか喋らなくなった","突然方言を使い始めた","独り言で漫才を始めた",
+  "猫のまねをした","ロボットのふりをした","幽霊のふりをした",
+
+  // 食べ物系
+  "全部食べた","全部残した","三回おかわりした","食べすぎて後悔した",
+  "激辛に挑戦して失敗した","賞味期限を無視した","夜中にラーメンを食べた","ダイエット中にケーキを食べた",
+  "冷蔵庫を10回開け閉めした","鍋を焦がした","炊飯を失敗した","缶詰だけで1週間過ごした",
+  "インスタント食品だけで乗り切った",
+
+  // お金系
+  "全財産をはたいた","ガチャに課金しすぎた","衝動買いした","返品できなかった",
+  "割り勘で損した","財布に500円しかなかった","給料日前に5000円借りた",
+  "ポイントを期限切れにした","クーポンを使い忘れた","セールで不要なものを買った",
+
+  // SNS・ネット
+  "バズった","炎上した","垢バンされた","誤爆した","既読スルーした",
+  "グループLINEを退会した","ストーリーを間違えた人に送った","検索履歴を見られた","スクショがバレた",
+  "Twitterで愚痴ったら本人に見られた","フォロワーが一気に減った","フォロワーが一気に増えた",
+  "ライブ配信で失敗した","YouTubeを始めたが3本で挫折した",
+
+  // 仕事・学校
+  "会議で居眠りした","プレゼンで頭が真っ白になった","提出期限を間違えた","メールを誤送信した",
+  "上司に怒られた","部下に怒られた","誰にも怒られなかった",
+  "テストで満点を取った","テストで0点を取った","レポートをコピペした","バレた","バレなかった",
+  "会議室を間違えた","マイクをミュートのまま話し続けた","CCとBCCを間違えた",
+  "取引先の名前を間違えた","敬語を間違えてメールを送った",
+
+  // 恋愛・人間関係
+  "告白した","フラれた","告白された","OKした","逃げた",
+  "一目惚れした","浮気がバレた","修羅場になった","仲直りした",
+  "友達をなくした","ぼっちになった","急に人気者になった",
+  "LINEを送り間違えた","夢の中の話をリアルとして怒った",
+
+  // 健康・身体
+  "筋肉痛になった","ぎっくり腰になった","花粉症が爆発した","二日酔いになった",
+  "48時間起きてた","急に体重が5kg増えた","健康診断でひっかかった",
+
+  // 大げさ・シュール系
+  "世界征服を目指した","宇宙征服を宣言した","全人類に謝罪した","全人類を救おうとした",
+  "地球の裏側まで走った","月まで歩こうとした","海を泳いで渡ろうとした",
+  "1億円を貯めると宣言した","タイムマシンを発明しようとした","永遠の命を追い求めた",
+  "独立国家を作ろうとした","自分だけの憲法を制定した","国連に手紙を書いた",
+  "NASAに就職しようとした","自分の銅像を作った","自分の伝記を書いた",
+  "自分の誕生日を祝日にしようとした","特許を取った","論文を書いた",
+
+  // テレビ・エンタメ系
+  "深夜ラジオのMCを担当した","朝の情報番組に生出演した","NHKのニュースキャスターになった",
+  "紅白歌合戦に出場した","M-1グランプリに出た","THE MANZAIで優勝した",
+  "オリンピックに出場した","ワールドカップに出た","大相撲で横綱になった",
+  "ドラマの主役を張った","映画の主演を務めた","舞台に立った","ミュージカルに出た",
+  "YouTube登録者1000万人を達成した","テレビ通販に出演した","バラエティで滑った",
+  "週刊誌に載った","朝のニュースで取り上げられた","お昼のワイドショーで特集された",
+
+  // 食・グルメ系（シュール）
+  "ミシュランの星を取った","食べログで日本一になった","コンビニ飯だけで1ヶ月過ごした",
+  "冷蔵庫の残り物でフルコースを作った","ラーメン屋を開業した","焼肉屋を始めた","喫茶店を起業した",
+
+  // 旅・冒険系
+  "無一文で日本一周した","ヒッチハイクで北海道まで行った","野宿で全国を旅した",
+  "バックパッカーになった","無人島で1ヶ月過ごした","砂漠を歩いて横断した",
+  "エベレストに登頂した","マリアナ海溝に潜った",
+
+  // 学習・挑戦系
+  "急に英語がペラペラになった","急に料理の天才になった",
+  "国家資格を1週間で取った","資格を50個集めた","プログラミングを独学で習得した",
+  "AIを作り始めた","アプリを開発して大儲けした",
+
+  // 笑い系
+  "すべった","スベった上にころんだ","笑いが止まらなくなった","笑いすぎて泣いた",
+  "つまらないことを真剣に考えた","くだらないことに全力を出した",
+  "どうでもいいことを1時間議論した","全力で走ったのに遅れた",
+  "空回りした","天丼をきめた","絶妙なタイミングでズッコケた",
+
+  // その他シュール
+  "なぜか許された","なぜか成功した","なぜか失敗した","なぜか注目された",
+  "空気になった","伝説になった","黒歴史になった","なかったことにした",
+  "号泣した","大爆笑した","絶句した","ドン引きされた","全員に感動された",
+  "100万円を拾った","宝くじが当たった","全部使い切った","1円も残らなかった",
+  "墓場まで持っていった","全部バラされた","ニュースになった",
+  "現実逃避した","夢を追いかけた","夢を諦めた","夢を叶えた",
+  "なんとかなった","奇跡が起きた","奇跡が起きなかった","結局いつもと同じだった",
+];
+
+// ゲーム状態
+let players = [];
+let lateMember = "";
+let lateVisibleCard = "";
+let secPerPerson = 10;
+let roundNum = 0;
+let gameCount = 0;
+let currentNani = "";
+let currentDoshita = "";
+let passCallback = null;
+let viewQueue = [];
+let viewQueuePos = 0;
+let timerInterval = null;
+let currentAccuser = "";
+let eliminatedPlayers = [];
+let accuseHistory = [];
+let selectedAccuse = "";
+let accuseCount = 0;
+let scores = {};
+let roundHistory = [];
+let naniDeck = [], doshitaDeck = [];
+let naniPos = 0, doshitaPos = 0;
+let guessRevealed = false;
+let pendingMajiWin = false;
+
+window.onload = () => { initPlayers(); updateTimerPreview(); };
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function updateTimerPreview() {
+  const sec = parseInt(document.getElementById("secPerPerson").value);
+  document.getElementById("secPerPersonVal").textContent = sec + "秒";
+  const n = document.querySelectorAll(".player-input").length || 4;
+  document.getElementById("totalTimePreview").textContent = (sec * n) + "秒";
+}
+
+function showSetup() { showScreen("setupScreen"); }
+
+function initPlayers() {
+  document.getElementById("playerList").innerHTML = "";
+  ["プレイヤー1","プレイヤー2","プレイヤー3","プレイヤー4"].forEach(n => addPlayerRow(n));
+  updateTimerPreview();
+}
+function addPlayer() {
+  addPlayerRow(`プレイヤー${document.querySelectorAll(".player-input").length + 1}`);
+  updateTimerPreview();
+}
+function addPlayerRow(name) {
+  const div = document.createElement("div");
+  div.className = "player-input";
+  div.innerHTML = `
+    <input type="text" value="${name}" placeholder="名前" oninput="updateTimerPreview()">
+    <button class="remove-btn" onclick="removePlayer(this)">×</button>
+  `;
+  document.getElementById("playerList").appendChild(div);
+  updateTimerPreview();
+}
+function removePlayer(btn) {
+  if (document.querySelectorAll(".player-input").length <= 3) { alert("最低3人必要です"); return; }
+  btn.parentElement.remove();
+  updateTimerPreview();
+}
+
+function startGame() {
+  players = Array.from(document.querySelectorAll(".player-input input"))
+    .map(i => i.value.trim()).filter(n => n);
+  if (players.length < 3) { alert("最低3人必要です"); return; }
+  secPerPerson = parseInt(document.getElementById("secPerPerson").value);
+  if (Object.keys(scores).length === 0) players.forEach(p => scores[p] = 0);
+  roundNum = 0; gameCount = 0;
+  naniDeck = shuffle(NANI_CARDS); doshitaDeck = shuffle(DOSHITA_CARDS);
+  naniPos = 0; doshitaPos = 0;
+  startRound();
+}
+
+function startRound() {
+  roundNum++; gameCount++;
+  lateVisibleCard = ""; eliminatedPlayers = []; accuseHistory = [];
+  selectedAccuse = ""; accuseCount = 0; guessRevealed = false; pendingMajiWin = false;
+  if (naniPos >= naniDeck.length)       { naniDeck    = shuffle(NANI_CARDS);    naniPos    = 0; }
+  if (doshitaPos >= doshitaDeck.length) { doshitaDeck = shuffle(DOSHITA_CARDS); doshitaPos = 0; }
+  currentNani    = naniDeck[naniPos++];
+  currentDoshita = doshitaDeck[doshitaPos++];
+  lateMember = players[Math.floor(Math.random() * players.length)];
+  viewQueue = [...players]; viewQueuePos = 0;
+  showNextView();
+}
+
+function showNextView() {
+  if (viewQueuePos >= viewQueue.length) { startTalk(); return; }
+  const player = viewQueue[viewQueuePos];
+  const isLate = player === lateMember;
+  passCallback = () => { if (isLate) showLateChoice(player); else showCardView(player, false); };
+  document.getElementById("passName").textContent = player;
+  showScreen("passScreen");
+}
+function onPassReady() { if (passCallback) passCallback(); }
+
+function showLateChoice(playerName) {
+  document.getElementById("lateChoiceName").textContent = `${playerName} さんへ`;
+  showScreen("lateChoiceScreen");
+}
+function selectLateCard(choice) {
+  lateVisibleCard = choice;
+  showCardView(viewQueue[viewQueuePos], true);
+}
+
+function showCardView(playerName, isLate) {
+  document.getElementById("cardViewName").textContent = `${playerName} さんへ`;
+  document.getElementById("cardViewSub").textContent = isLate ? "選んだカードだけ見えています" : "両方のカードが見えています";
+  const content = document.getElementById("cardViewContent");
+  content.innerHTML = "";
+  if (!isLate) {
+    content.innerHTML = `
+      <div class="card-label nani-label">何が</div>
+      <div class="nani-card"><span class="card-type-tag">何が</span><span>${currentNani}</span></div>
+      <div class="card-label doshita-label" style="margin-top:4px;">どうした</div>
+      <div class="doshita-card"><span class="card-type-tag">どうした</span><span>${currentDoshita}</span></div>
+    `;
+  } else {
+    const sN = lateVisibleCard === "nani";
+    const sD = lateVisibleCard === "doshita";
+    content.innerHTML = `
+      <div class="card-label nani-label">何が</div>
+      <div class="flip-card ${sN ? 'flipped' : ''}" id="fcNani" ${!sN ? "onclick=\"flipCard('fcNani')\"" : ""}>
+        <div class="flip-card-inner">
+          <div class="flip-card-front"><span style="font-size:1.8rem;">${sN ? '🟦' : '🔒'}</span><span class="tap-hint">${sN ? '' : 'タップで開く（見えません）'}</span></div>
+          <div class="flip-card-back ${sN ? 'nani-back' : 'hidden-back'}"><span class="card-type-tag">${sN ? '何が' : '非表示'}</span>${sN ? currentNani : '？？？'}</div>
+        </div>
+      </div>
+      <div class="card-label doshita-label" style="margin-top:8px;">どうした</div>
+      <div class="flip-card ${sD ? 'flipped' : ''}" id="fcDoshita" ${!sD ? "onclick=\"flipCard('fcDoshita')\"" : ""}>
+        <div class="flip-card-inner">
+          <div class="flip-card-front"><span style="font-size:1.8rem;">${sD ? '🟪' : '🔒'}</span><span class="tap-hint">${sD ? '' : 'タップで開く（見えません）'}</span></div>
+          <div class="flip-card-back ${sD ? 'doshita-back' : 'hidden-back'}"><span class="card-type-tag">${sD ? 'どうした' : '非表示'}</span>${sD ? currentDoshita : '？？？'}</div>
+        </div>
+      </div>
+    `;
+  }
+  showScreen("cardViewScreen");
+}
+
+function flipCard(id) { document.getElementById(id).classList.toggle("flipped"); }
+function onCardConfirmed() { viewQueuePos++; showNextView(); }
+
+function startTalk() {
+  const totalSec = secPerPerson * players.length;
+  document.getElementById("talkTimeInfo").textContent = `${players.length}人 × ${secPerPerson}秒 = ${totalSec}秒`;
+  document.getElementById("talkEndedArea").style.display = "none";
+  document.getElementById("talkNextBtn").style.display = "none";
+  document.getElementById("talkSkipBtn").style.display = "inline-block";
+  showScreen("talkScreen");
+  runTimer(totalSec);
+}
+function runTimer(totalSec) {
+  let remaining = totalSec;
+  const numEl = document.getElementById("timerNum");
+  const prog  = document.getElementById("timerProg");
+  const inner = document.getElementById("timerInner");
+  const C = 289;
+  clearInterval(timerInterval);
+  function update() {
+    numEl.textContent = remaining;
+    prog.style.strokeDashoffset = C - C * (remaining / totalSec);
+    const d = remaining <= 5;
+    prog.classList.toggle("danger", d);
+    inner.classList.toggle("danger", d);
+  }
+  update();
+  timerInterval = setInterval(() => { remaining--; update(); if (remaining <= 0) { clearInterval(timerInterval); onTimerEnd(); } }, 1000);
+}
+function onTimerEnd() {
+  document.getElementById("talkEndedArea").style.display = "block";
+  document.getElementById("talkNextBtn").style.display = "inline-block";
+  document.getElementById("talkSkipBtn").style.display = "none";
+}
+function skipTalk() { clearInterval(timerInterval); onTimerEnd(); }
+
+function startAccuse() {
+  const majiList = players.filter(p => p !== lateMember);
+  const startIdx = (gameCount - 1) % majiList.length;
+  currentAccuser = majiList[startIdx];
+  accuseCount = 0;
+  showAccuseScreen();
+}
+function showAccuseScreen() {
+  const remainingMaji = players.filter(p => p !== lateMember && !eliminatedPlayers.includes(p));
+  if (remainingMaji.length === 0) { showGuessScreen(true); return; }
+  accuseCount++;
+  document.getElementById("accuseTurnPlayer").textContent = currentAccuser;
+  document.getElementById("accuseTurnBadge").textContent = `${accuseCount}回目`;
+  document.getElementById("accuseWarn").textContent = "";
+  selectedAccuse = "";
+  document.getElementById("accuseConfirmBtn").disabled = true;
+  const candidates = players.filter(p => p !== currentAccuser && !eliminatedPlayers.includes(p));
+  const grid = document.getElementById("accuseGrid");
+  grid.innerHTML = "";
+  candidates.forEach(p => {
+    const btn = document.createElement("button");
+    btn.className = "accuse-btn";
+    btn.textContent = p;
+    btn.onclick = () => {
+      document.querySelectorAll(".accuse-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedAccuse = p;
+      document.getElementById("accuseConfirmBtn").disabled = false;
+    };
+    grid.appendChild(btn);
+  });
+  showScreen("accuseScreen");
+}
+function confirmAccuse() {
+  if (!selectedAccuse) return;
+  const accused = selectedAccuse;
+  const isLate  = accused === lateMember;
+  accuseHistory.push({ accuser: currentAccuser, accused, wasLate: isLate });
+  if (isLate) {
+    showGuessScreen(false);
+  } else {
+    eliminatedPlayers.push(accused);
+    const remainingMaji = players.filter(p => p !== lateMember && !eliminatedPlayers.includes(p));
+    if (remainingMaji.length === 0) { showGuessScreen(true); }
+    else { currentAccuser = accused; showAccuseScreen(); }
+  }
+}
+
+function showGuessScreen(majiWin) {
+  pendingMajiWin = majiWin;
+  guessRevealed = false;
+  const titleEl = document.getElementById("guessTitleText");
+  const subEl   = document.getElementById("guessSubText");
+  if (majiWin) {
+    titleEl.textContent = "🎉 見破られた！"; titleEl.style.color = "#00b894";
+    subEl.textContent   = `遅刻メンバー ${lateMember} が最後まで残りました！さて、お題は当たってた？`;
+  } else {
+    titleEl.textContent = "😈 見破れなかった！"; titleEl.style.color = "#6c63ff";
+    subEl.textContent   = `${lateMember} の勝利！でも…お題は当たってた？`;
+  }
+  document.getElementById("latePlayerLabel").textContent = `遅刻メンバー：${lateMember}`;
+  const seenEl = document.getElementById("seenCard");
+  seenEl.innerHTML = lateVisibleCard === "nani"
+    ? `<div class="nani-card"><span class="card-type-tag">何が（見えていた）</span><span>${currentNani}</span></div>`
+    : `<div class="doshita-card"><span class="card-type-tag">どうした（見えていた）</span><span>${currentDoshita}</span></div>`;
+  const hiddenType    = lateVisibleCard === "nani" ? "doshita" : "nani";
+  const hiddenLabel   = hiddenType === "nani" ? "何が（見えていなかった）" : "どうした（見えていなかった）";
+  const hiddenContent = hiddenType === "nani" ? currentNani : currentDoshita;
+  const wrap = document.getElementById("guessHiddenCardWrap");
+  wrap.dataset.type = hiddenType; wrap.dataset.label = hiddenLabel; wrap.dataset.content = hiddenContent;
+  wrap.innerHTML = `<div class="guess-card-hidden"><span style="font-size:2rem;">🔒</span><span class="guess-tap-label">タップで答えを見る</span><span class="guess-tap-label">めくる前にみんなで予想！</span></div>`;
+  showScreen("guessScreen");
+}
+function revealGuessCard() {
+  if (guessRevealed) return;
+  guessRevealed = true;
+  const wrap = document.getElementById("guessHiddenCardWrap");
+  wrap.innerHTML = wrap.dataset.type === "nani"
+    ? `<div class="guess-card-revealed-nani"><span class="card-type-tag">${wrap.dataset.label}</span><span>${wrap.dataset.content}</span></div>`
+    : `<div class="guess-card-revealed-doshita"><span class="card-type-tag">${wrap.dataset.label}</span><span>${wrap.dataset.content}</span></div>`;
+}
+function goToResult() { showResult(pendingMajiWin); }
+
+function showResult(majiWin) {
+  clearInterval(timerInterval);
+  const roundScores = {};
+  players.forEach(p => roundScores[p] = 0);
+  if (majiWin) {
+    players.filter(p => p !== lateMember).forEach(p => { roundScores[p] = 1; scores[p] = (scores[p] || 0) + 1; });
+  } else {
+    roundScores[lateMember] = 1; scores[lateMember] = (scores[lateMember] || 0) + 1;
+  }
+  roundHistory.push({ round: roundNum, nani: currentNani, doshita: currentDoshita, late: lateMember, majiWin });
+  const banner = document.getElementById("resultBanner");
+  if (majiWin) {
+    banner.className = "result-banner maji-win";
+    banner.innerHTML = `<div class="result-title">🎉 マジメンバーの勝利！</div><div class="result-desc">遅刻メンバー <b>${lateMember}</b> を最後まで残しました！</div>`;
+  } else {
+    banner.className = "result-banner late-win";
+    banner.innerHTML = `<div class="result-title">😈 遅刻メンバーの勝利！</div><div class="result-desc"><b>${lateMember}</b> は正体を隠し切りました！</div>`;
+  }
+  document.getElementById("resultNaniText").textContent    = currentNani;
+  document.getElementById("resultDoshitaText").textContent = currentDoshita;
+  const histEl = document.getElementById("accuseHistoryRows");
+  histEl.innerHTML = "";
+  if (accuseHistory.length === 0) {
+    histEl.innerHTML = `<div style="color:#555;font-size:0.82rem;text-align:center;">指名なし</div>`;
+  } else {
+    accuseHistory.forEach((h, i) => {
+      const row = document.createElement("div");
+      row.className = "accuse-history-row";
+      row.innerHTML = `<span style="color:#555;font-size:0.75rem;">${i+1}.</span><span>${h.accuser} → <b>${h.accused}</b></span><span class="${h.wasLate ? 'ng-badge' : 'ok-badge'}">${h.wasLate ? "😈 遅刻メンバー！" : "✓ マジメンバー"}</span>`;
+      histEl.appendChild(row);
+    });
+  }
+  const roundScoreEl = document.getElementById("roundScoreRows");
+  roundScoreEl.innerHTML = "";
+  players.forEach(p => {
+    const isLate = p === lateMember;
+    const row = document.createElement("div");
+    row.className = "score-row";
+    row.innerHTML = `<span>${p} <span style="font-size:0.72rem;color:#555;">${isLate ? "（遅刻）" : "（マジ）"}</span></span><span style="color:${roundScores[p] > 0 ? '#6c63ff' : '#555'};font-weight:bold;">${roundScores[p] > 0 ? '+1点' : '±0'}</span>`;
+    roundScoreEl.appendChild(row);
+  });
+  showScreen("resultScreen");
+}
+
+function showScoreScreen() {
+  const sorted = [...players].sort((a, b) => (scores[b] || 0) - (scores[a] || 0));
+  const container = document.getElementById("totalScoreRows");
+  container.innerHTML = "";
+  sorted.forEach((p, idx) => {
+    const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx+1}.`;
+    const row = document.createElement("div");
+    row.className = "score-row";
+    row.innerHTML = `<span>${medal} ${p}</span><span style="font-weight:bold;color:#6c63ff;">${scores[p] || 0}点</span>`;
+    container.appendChild(row);
+  });
+  const histEl = document.getElementById("roundHistoryRows");
+  histEl.innerHTML = "";
+  if (roundHistory.length === 0) {
+    histEl.innerHTML = `<div style="color:#555;font-size:0.82rem;text-align:center;">まだラウンドなし</div>`;
+  } else {
+    roundHistory.slice(-5).reverse().forEach(r => {
+      const row = document.createElement("div");
+      row.style.cssText = "padding:6px 0;border-bottom:1px solid #2a2a4a;font-size:0.78rem;";
+      row.innerHTML = `<div style="color:#888;">R${r.round}：<span style="color:#74b9ff;">${r.nani}</span><span style="color:#fd79a8;">${r.doshita}</span></div><div style="margin-top:2px;">遅刻：<b>${r.late}</b> → <span style="color:${r.majiWin ? '#00b894' : '#6c63ff'}">${r.majiWin ? 'マジメンバーの勝ち' : '遅刻メンバーの勝ち'}</span></div>`;
+      histEl.appendChild(row);
+    });
+  }
+  showScreen("scoreScreen");
+}
+
+function nextRound() { startRound(); }
+function resetAll() {
+  players = []; scores = {}; roundHistory = []; roundNum = 0; gameCount = 0;
+  clearInterval(timerInterval);
+  showScreen("titleScreen");
+  initPlayers();
+}
+</script>
+</body>
+</html>
