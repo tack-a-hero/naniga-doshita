@@ -1,8 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<script>/* Short material sounds. No melodic fanfares; all effects decay within 450 ms. */
+window.TableSound=(()=>{
+ const P={"hit": 165, "rub": 1600, "note": 540};
+ let ac=null,lastTap=-1;const voices=new Set(),guards=[];
+ function context(){try{if(!ac){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C()}if(ac.state==='suspended')ac.resume().catch(()=>{});return ac}catch{return null}}
+ function track(node,g){voices.add(node);node.onended=()=>{voices.delete(node);node.disconnect();g.disconnect()}}
+ function stop(){for(const node of voices)try{node.stop()}catch{}voices.clear()}
+ function modal(f,d,v,at=0){const c=context();if(!c)return;const t=c.currentTime+at;[[1,1],[2.76,.2],[4.8,.055]].forEach(([ratio,amp])=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*ratio;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,v*amp),t+.003);g.gain.exponentialRampToValueAtTime(.0001,t+d/Math.sqrt(ratio));o.connect(g);g.connect(c.destination);track(o,g);o.start(t);o.stop(t+d+.01)})}
+ function friction(d,f,v,at=0){const c=context();if(!c)return;const t=c.currentTime+at,len=Math.ceil(c.sampleRate*d),b=c.createBuffer(1,len,c.sampleRate),data=b.getChannelData(0);let previous=0;for(let i=0;i<len;i++){previous=.65*previous+.35*(Math.random()*2-1);data[i]=previous*Math.sin(Math.PI*i/len)**1.4}const src=c.createBufferSource(),filter=c.createBiquadFilter(),g=c.createGain();src.buffer=b;filter.type='bandpass';filter.frequency.value=f;filter.Q.value=.65;g.gain.value=v;src.connect(filter);filter.connect(g);g.connect(c.destination);voices.add(src);src.onended=()=>{voices.delete(src);src.disconnect();filter.disconnect();g.disconnect()};src.start(t)}
+ function pluck(f,d,v,at=0){const c=context();if(!c)return;const t=c.currentTime+at;[1,2,3,4].forEach((h,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*h;g.gain.setValueAtTime(v/(h*h),t);g.gain.exponentialRampToValueAtTime(.0001,t+d/(1+i*.4));o.connect(g);g.connect(c.destination);track(o,g);o.start(t);o.stop(t+d+.01)})}
+ function play(kind){if(document.hidden)return;const c=context();if(!c)return;if(kind==='tap'){if(c.currentTime-lastTap<.045)return;lastTap=c.currentTime;friction(.025,P.rub,.065);modal(P.hit,.045,.025);return}
+  if(kind==='paper'){friction(.13,P.rub,.18);friction(.04,P.rub*.6,.08,.09);return}
+  if(kind==='tick'){modal(P.hit*1.65,.035,.022);return}
+  if(kind==='place'){friction(.035,P.rub*.55,.13);modal(P.hit,.09,.05);return}
+  if(kind==='fail'||kind==='timeup'){modal(P.hit*.7,.16,.055);friction(.055,450,.13,.025);return}
+  if(kind==='reveal'){friction(.18,P.rub,.15);modal(P.hit,.12,.035,.1);return}
+  if(kind==='confirm'){friction(.05,P.rub,.1);modal(P.hit,.12,.045,.035);return}
+  const voice=P.string?pluck:modal;voice(P.note,.28,.045);voice(P.note*1.5,.27,.025,.09);friction(.055,P.rub*.65,.06);
+ }
+ function install(object,allowed,mapping){guards.push(allowed);for(const [name,kind]of Object.entries(mapping))object[name]=()=>{if(allowed())play(kind)};for(const name of ['toggle','setEnabled','setPrivate','stop','drumStop']){if(typeof object[name]!=='function')continue;const old=object[name];object[name]=function(...args){stop();return old.apply(this,args)}}}
+ new MutationObserver(()=>{if(guards.some(allowed=>!allowed()))stop()}).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class','hidden']});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)stop()});window.addEventListener('pagehide',stop);
+ return{play,stop,install};
+})();
+</script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>何がどうした</title>
 <style>
 /* =========================================================
@@ -644,10 +669,11 @@ b{font-weight:700}
     <div>
       <span class="card-cat" style="color:var(--text3)">見えていなかったカード</span>
       <div id="guessHiddenCardWrap" onclick="revealGuessCard()" style="cursor:pointer"></div>
-      <p class="muted" style="margin-top:10px">めくる前に、みんなで予想してみよう</p>
+      <p class="muted" style="margin-top:10px">めくる前に口頭で予想。答えを見て正解／不正解を選びます（お題当ては得点に影響しません）。</p>
     </div>
     <div class="btn-row">
-      <button class="btn btn-primary" onclick="toResult()">結果へ</button>
+      <button class="btn btn-primary" id="guessCorrectBtn" onclick="judgeGuess(true)" hidden>正解</button>
+      <button class="btn btn-ghost" id="guessWrongBtn" onclick="judgeGuess(false)" hidden>不正解</button>
       <button class="btn btn-ghost back-slot" onclick="goBack()">← 一つ前に戻る</button>
     </div>
   </div>
@@ -1244,7 +1270,8 @@ function toGuess(){
    お題当て
    ========================================================= */
 function renderGuess(){
-  S.guessOpen = false;
+  S.guessOpen = false;S.guessCorrect=null;
+  document.getElementById("guessCorrectBtn").hidden=true;document.getElementById("guessWrongBtn").hidden=true;
   const eb = document.getElementById("guessEyebrow");
   const t = document.getElementById("guessTitleText");
   const s = document.getElementById("guessSubText");
@@ -1271,6 +1298,7 @@ function renderGuess(){
 function revealGuessCard(){
   if(S.guessOpen) return;
   S.guessOpen = true;
+  document.getElementById("guessCorrectBtn").hidden=false;document.getElementById("guessWrongBtn").hidden=false;
   SFX.reveal();
   const wrap = document.getElementById("guessHiddenCardWrap");
   wrap.innerHTML = '<div class="word word-block '+(wrap.dataset.type==="nani"?"word-nani":"word-doshita")+'">'+esc(wrap.dataset.content)+'</div>';
@@ -1279,15 +1307,16 @@ function revealGuessCard(){
 /* =========================================================
    結果
    ========================================================= */
+function judgeGuess(ok){if(step.t!=="guess"||!S.guessOpen)return;S.guessCorrect=!!ok;toResult();}
 function toResult(){
-  if(step.t !== "guess" || !advanceLock()) return;
+  if(step.t !== "guess" || typeof S.guessCorrect!=="boolean" || !advanceLock()) return;
   pushHistory();
   const rs = Object.create(null);
   players.forEach(p => rs[p] = 0);
   if(S.majiWin){ players.filter(p => p !== S.late).forEach(p => { rs[p] = 1; S.scores[p] = (S.scores[p]||0)+1; }); }
   else { rs[S.late] = 1; S.scores[S.late] = (S.scores[S.late]||0)+1; }
   S.roundScores = rs;
-  S.roundHistory.push({ round:S.roundNum, nani:S.nani, doshita:S.doshita, late:S.late, majiWin:S.majiWin });
+  S.roundHistory.push({ round:S.roundNum, nani:S.nani, doshita:S.doshita, late:S.late, majiWin:S.majiWin,guessCorrect:S.guessCorrect });
   step = { t:"result" };
   renderResult();
 }
@@ -1636,5 +1665,8 @@ body{background:radial-gradient(ellipse at top,#53675533,transparent 65%),var(--
 .reveal:not(.is-open) .flip-back{visibility:hidden}.reveal.is-open .flip-front{visibility:hidden}.flip-face{-webkit-backface-visibility:hidden;backface-visibility:hidden}
 #roundScoreRows .pt,#totalScoreRows .pt{color:#3c6657!important}#roundScoreRows .list-row,#totalScoreRows .list-row{border-color:#91a57866}
 </style>
-</body>
+<style id="touch-input-readability">
+@media (any-pointer:coarse){input:not([type=range]):not([type=checkbox]):not([type=radio]),textarea,select{font-size:max(16px,1em)}input::placeholder,textarea::placeholder{opacity:1}}
+</style><style id="readability-corrections">.player-row .num{color:#e1e9d2}.nominations .n,.accuse-order .n{color:#d7edef}</style><script>TableSound.install(SFX,()=>SFX.enabled&&!SFX.isPrivate,{"confirm": "confirm", "pass": "paper", "reveal": "paper", "tick": "tick", "tickWarn": "tick", "timeUp": "timeup", "drumStart": "reveal", "safe": "confirm", "caught": "fail", "fanfare": "success", "lose": "fail", "point": "place"});
+</script><style>#guessCorrectBtn[hidden],#guessWrongBtn[hidden]{display:none}.rule-list .n{color:#b2d8d9}.player-row .num{color:#e3ead9}</style><style>.score-row .rank,.score-list .rank{color:#e3ead9}</style><style>.list-row .rank{color:#e3ead9}</style></body>
 </html>
