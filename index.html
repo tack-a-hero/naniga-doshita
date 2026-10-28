@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head><script>window.SessionUI=(()=>{
+<head><link href="https://fonts.googleapis.com/css2?family=M+PLUS+2&display=swap" rel="stylesheet"><script>window.SessionUI=(()=>{
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const icon=p=>p.icon||(window.GameArt?GameArt.person(p.seat??p.id):'');
  const rows=players=>players.map(p=>`<button type="button" class="session-seat" data-seat="${esc(p.id)}" ${p.disabled?'disabled':''}><span class="session-face">${icon(p)}</span><span class="session-seat-copy"><b>${esc(p.name)}</b><small>${esc(p.status||(p.done?'確認済み':'タップして確認'))}</small></span><span class="session-chevron" aria-hidden="true">${p.done?'✓':'›'}</span></button>`).join('');
@@ -50,27 +50,13 @@
 </script>
 <script>/* Short material sounds. No melodic fanfares; all effects decay within 450 ms. */
 window.TableSound=(()=>{
- const P={"hit": 165, "rub": 1600, "note": 540};
- let ac=null,lastTap=-1;const voices=new Set(),guards=[];
+ const P=[260, 0.15, 0.05];let ac=null,last=-1;const voices=new Set();
  function context(){try{if(!ac){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C()}if(ac.state==='suspended')ac.resume().catch(()=>{});return ac}catch{return null}}
- function track(node,g){voices.add(node);node.onended=()=>{voices.delete(node);node.disconnect();g.disconnect()}}
- function stop(){for(const node of voices)try{node.stop()}catch{}voices.clear()}
- function modal(f,d,v,at=0){const c=context();if(!c)return;const t=c.currentTime+at;[[1,1],[2.76,.2],[4.8,.055]].forEach(([ratio,amp])=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*ratio;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,v*amp),t+.003);g.gain.exponentialRampToValueAtTime(.0001,t+d/Math.sqrt(ratio));o.connect(g);g.connect(c.destination);track(o,g);o.start(t);o.stop(t+d+.01)})}
- function friction(d,f,v,at=0){const c=context();if(!c)return;const t=c.currentTime+at,len=Math.ceil(c.sampleRate*d),b=c.createBuffer(1,len,c.sampleRate),data=b.getChannelData(0);let previous=0;for(let i=0;i<len;i++){previous=.65*previous+.35*(Math.random()*2-1);data[i]=previous*Math.sin(Math.PI*i/len)**1.4}const src=c.createBufferSource(),filter=c.createBiquadFilter(),g=c.createGain();src.buffer=b;filter.type='bandpass';filter.frequency.value=f;filter.Q.value=.65;g.gain.value=v;src.connect(filter);filter.connect(g);g.connect(c.destination);voices.add(src);src.onended=()=>{voices.delete(src);src.disconnect();filter.disconnect();g.disconnect()};src.start(t)}
- function pluck(f,d,v,at=0){const c=context();if(!c)return;const t=c.currentTime+at;[1,2,3,4].forEach((h,i)=>{const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f*h;g.gain.setValueAtTime(v/(h*h),t);g.gain.exponentialRampToValueAtTime(.0001,t+d/(1+i*.4));o.connect(g);g.connect(c.destination);track(o,g);o.start(t);o.stop(t+d+.01)})}
- function play(kind){if(document.hidden||document.querySelector('.session-dialog[open]'))return;const c=context();if(!c)return;if(kind==='tap'){if(c.currentTime-lastTap<.045)return;lastTap=c.currentTime;friction(.025,P.rub,.065);modal(P.hit,.045,.025);return}
-  if(kind==='paper'){friction(.13,P.rub,.18);friction(.04,P.rub*.6,.08,.09);return}
-  if(kind==='tick'){modal(P.hit*1.65,.035,.022);return}
-  if(kind==='place'){friction(.035,P.rub*.55,.13);modal(P.hit,.09,.05);return}
-  if(kind==='fail'||kind==='timeup'){modal(P.hit*.7,.16,.055);friction(.055,450,.13,.025);return}
-  if(kind==='reveal'){friction(.18,P.rub,.15);modal(P.hit,.12,.035,.1);return}
-  if(kind==='confirm'){friction(.05,P.rub,.1);modal(P.hit,.12,.045,.035);return}
-  friction(.07,P.rub*.7,.14);modal(P.hit*.8,.075,.024,.02);
- }
- function install(object,allowed,mapping){guards.push(allowed);for(const [name,kind]of Object.entries(mapping))object[name]=()=>{if(allowed())play(kind)};for(const name of ['toggle','setEnabled','setPrivate','stop','drumStop']){if(typeof object[name]!=='function')continue;const old=object[name];object[name]=function(...args){stop();return old.apply(this,args)}}}
- new MutationObserver(()=>{if(guards.some(allowed=>!allowed()))stop()}).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class','hidden']});
- document.addEventListener('visibilitychange',()=>{if(document.hidden)stop()});window.addEventListener('pagehide',stop);
- return{play,stop,install};
+ function stop(){for(const n of voices)try{n.stop()}catch{}voices.clear()}
+ function tone(f,d,v,delay=0){const c=context();if(!c)return;const t=c.currentTime+delay;for(const [h,a]of [[1,1],[2,P[2]]]){const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(f*h,t);o.frequency.exponentialRampToValueAtTime(f*h*.985,t+d);g.gain.setValueAtTime(.00001,t);g.gain.exponentialRampToValueAtTime(v*a,t+.012);g.gain.exponentialRampToValueAtTime(.00001,t+d);o.connect(g);g.connect(c.destination);voices.add(o);o.onended=()=>{voices.delete(o);o.disconnect();g.disconnect()};o.start(t);o.stop(t+d+.02)}}
+ function play(k){if(document.hidden||document.querySelector('.session-dialog[open]'))return;const c=context();if(!c)return;if(c.currentTime-last<.065)return;last=c.currentTime;const f=P[0],d=P[1];if(k==='tick')tone(f*.8,.06,.012);else if(k==='fail'||k==='timeup')tone(f*.7,d,.024);else if(k==='success'){tone(f,d,.025);tone(f*1.25,d,.019,.09)}else if(k==='reveal')tone(f*1.12,d*1.3,.024);else if(k==='confirm')tone(f,d,.026);else if(k==='place')tone(f*.9,d*.7,.021);else tone(f*.75,Math.min(d,.09),.014)}
+ function install(o,allowed,map){for(const [n,k]of Object.entries(map))o[n]=()=>{if(allowed())play(k)};for(const n of ['toggle','setEnabled','setPrivate','stop','drumStop']){if(typeof o[n]!=='function')continue;const old=o[n];o[n]=function(...a){stop();return old.apply(this,a)}}}
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)stop()});window.addEventListener('pagehide',stop);return{play,stop,install};
 })();
 </script>
 <meta charset="UTF-8">
@@ -716,10 +702,10 @@ b{font-weight:700}
     <div>
       <span class="card-cat" style="color:var(--text3)">見えていなかったカード</span>
       <div id="guessHiddenCardWrap" onclick="revealGuessCard()" style="cursor:pointer"></div>
-      <p class="muted" style="margin-top:10px">めくる前に口頭で予想。答えを見て正解／不正解を選びます（お題当ては得点に影響しません）。</p>
+      <p class="muted" style="margin-top:10px">口頭で予想したら、カードをめくって答え合わせ。お題当ては得点に影響しません。</p>
     </div>
     <div class="btn-row">
-      <button class="btn btn-primary" id="guessCorrectBtn" onclick="judgeGuess(true)" hidden>正解</button>
+      <button class="btn btn-primary" id="guessCorrectBtn" onclick="toResult()" hidden>結果を見る</button>
       <button class="btn btn-ghost" id="guessWrongBtn" onclick="judgeGuess(false)" hidden>不正解</button>
       <button class="btn btn-ghost back-slot" onclick="goBack()">← 一つ前に戻る</button>
     </div>
@@ -1185,10 +1171,7 @@ function toAccuse(){
   renderAccusePass();
 }
 function renderAccusePass(){
-  let host=document.getElementById('accuserRoster');if(!host){host=document.createElement('div');host.id='accuserRoster';host.className='v5-roster';document.getElementById('accusePassScreen').prepend(host)}
-  SessionUI.mount(host,players.map((p,i)=>({id:p,name:p,seat:i,disabled:p!==S.accuser,status:p===S.accuser?'指名する番です':'順番をお待ちください'})),()=>onAccusePassReady(),'指名する人を選ぶ');
-  [...document.getElementById('accusePassScreen').children].filter(e=>e!==host).forEach(e=>e.classList.add('v5-hidden-handoff'));
-
+  const h=document.getElementById('accuserRoster');if(h)h.remove();[...document.getElementById('accusePassScreen').children].forEach(e=>e.classList.remove('v5-hidden-handoff'));
   document.getElementById("accusePassName").textContent = S.accuser;document.getElementById("accuseGuestPortrait").innerHTML=GameArt.person(players.indexOf(S.accuser));
   showScreen("accusePassScreen");
 }
@@ -1355,7 +1338,7 @@ function renderGuess(){
 function revealGuessCard(){
   if(S.guessOpen) return;
   S.guessOpen = true;
-  document.getElementById("guessCorrectBtn").hidden=false;document.getElementById("guessWrongBtn").hidden=false;
+  document.getElementById("guessCorrectBtn").hidden=false;document.getElementById("guessWrongBtn").hidden=true;
   SFX.reveal();
   const wrap = document.getElementById("guessHiddenCardWrap");
   wrap.innerHTML = '<div class="word word-block '+(wrap.dataset.type==="nani"?"word-nani":"word-doshita")+'">'+esc(wrap.dataset.content)+'</div>';
@@ -1366,7 +1349,7 @@ function revealGuessCard(){
    ========================================================= */
 function judgeGuess(ok){if(step.t!=="guess"||!S.guessOpen)return;S.guessCorrect=!!ok;toResult();}
 function toResult(){
-  if(step.t !== "guess" || typeof S.guessCorrect!=="boolean" || !advanceLock()) return;
+  if(step.t !== "guess" || !S.guessOpen || !advanceLock()) return;
   pushHistory();
   const rs = Object.create(null);
   players.forEach(p => rs[p] = 0);
@@ -1762,5 +1745,5 @@ dialog::backdrop{background:#0c1218b8;backdrop-filter:blur(5px)}
 .session-cover span{font-size:13px!important;color:#45554b!important;letter-spacing:.14em!important;overflow-wrap:anywhere}
 .session-private-name{font-size:18px!important;font-weight:700!important;color:var(--ui-ink)!important;line-height:1.8!important;margin:0 0 16px!important;overflow-wrap:anywhere!important}
 @media(max-height:500px){.session-cover{min-height:110px!important;padding:8px!important}.session-cover:before{width:85px;height:85px}}
-html body #cardViewContent .flip-front,html body #peekContent .flip-front{background:#fff8e9!important;background-image:none!important;color:#294351!important;gap:5px!important}html body #cardViewContent .flip-front:before,html body #peekContent .flip-front:before{content:'';display:block!important;flex:none;width:96px!important;height:96px!important;border:0!important;margin:0 auto 6px!important;background-image:var(--ui-cover-art)!important;background-size:200% 200%!important;background-position:var(--ui-cover-position)!important}.flip-front .lock{color:#304b54!important}.flip-front .hint{color:#53665f!important}.flip-inner,.flip-face,.word-locked{min-height:205px!important}.word-locked{display:flex;align-items:center;justify-content:center}.flip-back .word{min-height:0!important}@media(max-height:500px){.flip-inner,.flip-face,.word-locked{min-height:130px!important}html body #cardViewContent .flip-front:before{width:60px!important;height:60px!important}}</style></body>
+html body #cardViewContent .flip-front,html body #peekContent .flip-front{background:#fff8e9!important;background-image:none!important;color:#294351!important;gap:5px!important}html body #cardViewContent .flip-front:before,html body #peekContent .flip-front:before{content:'';display:block!important;flex:none;width:96px!important;height:96px!important;border:0!important;margin:0 auto 6px!important;background-image:var(--ui-cover-art)!important;background-size:200% 200%!important;background-position:var(--ui-cover-position)!important}.flip-front .lock{color:#304b54!important}.flip-front .hint{color:#53665f!important}.flip-inner,.flip-face,.word-locked{min-height:205px!important}.word-locked{display:flex;align-items:center;justify-content:center}.flip-back .word{min-height:0!important}@media(max-height:500px){.flip-inner,.flip-face,.word-locked{min-height:130px!important}html body #cardViewContent .flip-front:before{width:60px!important;height:60px!important}}</style><style id="reported-device-repairs-v7">html body .screen,html body .stack,html body main,html body .app{animation:none!important;transform:none!important}html body .portrait-seat{display:grid!important;place-items:center!important;padding:0!important;line-height:1!important;font-size:11px!important;letter-spacing:0!important;box-sizing:border-box!important;width:21px!important;height:21px!important;bottom:0!important;right:0!important;transform:none!important;color:#fffdf0!important;background:#294a51!important;border:2px solid #fff9eb!important;border-radius:50%!important}html body .toast,html body #toast{background:#fff8e8!important;color:#244a45!important;border:1px solid #779b90!important;box-shadow:0 4px 18px #183e4320!important;line-height:1.7!important}</style><style id="reported-device-repairs-v7">html body #guessScreen .word-block,html body #resultScreen .word-block{background:#fff0d0!important;color:#214962!important;border:0!important;border-radius:12px!important;box-shadow:none!important;padding:26px 22px!important;min-height:115px!important;font-size:clamp(24px,6vw,34px)!important;line-height:1.7!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow-wrap:anywhere!important}html body #guessScreen .word-doshita,html body #resultScreen .word-doshita{background:#f4bd9b!important;color:#493229!important}html body #guessWrongBtn{display:none!important}html body #guessScreen .wrap{padding-top:32px!important}html body #guessTitleText{padding-right:0!important;margin-top:24px!important}html body #guessScreen{padding-top:50px!important}</style><style id="reported-device-repairs-v7">:root{--ui-font:'M PLUS 2','Yu Gothic','Hiragino Kaku Gothic ProN',sans-serif!important;--serif:'M PLUS 2',sans-serif!important;--sans:'M PLUS 2',sans-serif!important;--mono:'M PLUS 2',sans-serif!important}html body,html body *{font-family:'M PLUS 2','Yu Gothic','Hiragino Kaku Gothic ProN',sans-serif!important}h1,h2,h3,.h1,.h2,.wordmark,.h-display,.h-screen{font-weight:700!important;letter-spacing:.02em!important}button,input,textarea,select{font-family:var(--ui-font)!important}html body .portrait-seat{line-height:1!important;letter-spacing:0!important}</style></body>
 </html>
