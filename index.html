@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head><link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+Antique&display=swap" rel="stylesheet"><meta name="app-release" content="mobile-review-20261029-v9"><link href="https://fonts.googleapis.com/css2?family=M+PLUS+2&display=swap" rel="stylesheet"><script>window.SessionUI=(()=>{
+<head><meta name="app-release" content="screen-repair-20261029-v10"><script>window.SessionUI=(()=>{
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const icon=p=>p.icon||(window.GameArt?GameArt.person(p.seat??p.id):'');
  const rows=players=>players.map(p=>`<button type="button" class="session-seat" data-seat="${esc(p.id)}" ${p.disabled?'disabled':''}><span class="session-face">${icon(p)}</span><span class="session-seat-copy"><b>${esc(p.name)}</b><small>${esc(p.status||(p.done?'確認済み':'タップして確認'))}</small></span><span class="session-chevron" aria-hidden="true">${p.done?'✓':'›'}</span></button>`).join('');
@@ -33,7 +33,7 @@
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
  return{esc,rows,mount,pick,confirm,dialog,viewport};
 })();
-</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@500;700&amp;display=swap" rel="stylesheet"><script>window.GameArt=(()=>{
+</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><script>window.GameArt=(()=>{
  const geometry={"h": 1254, "rows": [{"y": 530, "height": 260}, {"y": 874, "height": 260}], "crest": false},key='naniga-doshita:portraits:v1';
  let order=Array.from({length:12},(_,i)=>i);
  try{const saved=JSON.parse(localStorage.getItem(key));if(Array.isArray(saved)&&saved.length>=12&&saved.length%12===0&&saved.every(i=>Number.isInteger(i)&&i>=0&&i<12)&&Array.from({length:saved.length/12},(_,i)=>new Set(saved.slice(i*12,i*12+12)).size===12).every(Boolean))order=saved}catch{}
@@ -514,7 +514,7 @@ b{font-weight:700}
 }
 
 </style>
-</head>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700;900&amp;display=swap" rel="stylesheet"></head>
 <body>
 <button id="sfxToggle" onclick="toggleSfx()" aria-label="サウンド切替"><span class="ind"></span><span id="sfxLabel">Sound</span></button>
 <div id="fx"></div>
@@ -652,7 +652,6 @@ b{font-weight:700}
       <div class="pick-grid" id="peekGrid"></div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-go" id="talkNextBtn" style="display:none" onclick="toAccuse()">指名フェーズへ</button>
       <button class="btn btn-primary" id="talkEndBtn" onclick="toAccuse()">議論を終える</button>
       <button class="btn btn-ghost back-slot" onclick="goBack()">← 一つ前に戻る</button>
     </div>
@@ -1108,7 +1107,6 @@ function renderTalk(){
   const total = secPerPerson * players.length;
   document.getElementById("talkInfo").textContent = players.length + "人 × " + secPerPerson + "秒";
   document.getElementById("talkEnded").style.display = "none";
-  document.getElementById("talkNextBtn").style.display = "none";
   document.getElementById("talkEndBtn").style.display = "block";
   const grid = document.getElementById("peekGrid");
   grid.innerHTML = "";
@@ -1156,8 +1154,7 @@ function onTimerEnd(){
   if(!SFX.isPrivate && navigator.vibrate) navigator.vibrate([60,50,60]);
   shakeScreen("talkScreen");
   document.getElementById("talkEnded").style.display = "block";
-  document.getElementById("talkNextBtn").style.display = "block";
-  document.getElementById("talkEndBtn").style.display = "none";
+  document.getElementById("talkEndBtn").style.display = "block";
 }
 
 async function openPeek(player){
@@ -1687,16 +1684,7 @@ html.reload-protected,html.reload-protected body{overscroll-behavior-y:none}
  document.addEventListener('touchstart',e=>{
   touch=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null;
  },{passive:true});
- document.addEventListener('touchmove',e=>{
-  if(!playing()||!touch||e.touches.length!==1)return;
-  const t=e.touches[0],dy=t.clientY-touch.y,dx=t.clientX-touch.x;
-  touch={x:t.clientX,y:t.clientY};
-  if(dy<=0||dy<=Math.abs(dx))return;
-  const canScrollUp=e.composedPath().some(el=>el instanceof Element&&
-   el.scrollHeight>el.clientHeight+1&&el.scrollTop>0&&
-   /^(auto|scroll|overlay)$/.test(getComputedStyle(el).overflowY));
-  if(!canScrollUp&&(document.scrollingElement?.scrollTop||0)<=0&&e.cancelable)e.preventDefault();
- },{passive:false});
+ /* Document overscroll is handled once by ScreenScroll. */
  const reset=()=>{touch=null};
  document.addEventListener('touchend',reset,{passive:true});
  document.addEventListener('touchcancel',reset,{passive:true});
@@ -1823,5 +1811,81 @@ html body{position:relative!important;inset:auto!important;height:auto!important
 html body .app{position:relative!important;inset:auto!important}
 html body #worldToolbar .world-icon,html body .step-btn{border-radius:50%!important}
 html body button:focus-visible{outline:2px solid var(--ui-accent)!important;outline-offset:3px!important}
-</style></body>
+</style><style id="screen-repair-v10">:root{--app-bar-h:calc(56px + env(safe-area-inset-top,0px));--app-view-h:calc(var(--visible-h,100dvh) - var(--app-bar-h))}
+html,html body{overscroll-behavior-y:none!important;scroll-padding-top:calc(var(--app-bar-h) + 10px)!important}
+html body{display:block!important;padding-top:0!important;margin:0!important;min-height:100dvh!important}
+html body #worldToolbar{position:sticky!important;inset:auto!important;top:0!important;left:auto!important;right:auto!important;margin:0!important;flex:none!important;height:var(--app-bar-h)!important;align-self:stretch!important}
+html body .app,html body #app,html body #appRoot{padding-top:0!important;margin-top:0!important;scroll-padding-top:12px!important}
+html body .badge,html body .tag,html body .private-badge,html body .score-tag{border:0!important;box-shadow:none!important;text-shadow:none!important;background:none!important}
+html body .session-dialog{border-radius:16px!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;min-height:0!important}
+html body .session-dialog:not([open]){display:none!important}
+@layer sessionTypography{html body input::placeholder,html body textarea::placeholder{font-family:inherit!important;font-weight:inherit!important;font-style:normal!important}}
+html body .session-dialog-head{flex:none!important;align-items:center!important;gap:12px!important}
+html body .session-dialog-body{min-height:0!important;overflow:auto!important;overscroll-behavior-y:contain!important;flex:1 1 auto!important}
+html body .session-note{flex:none!important}
+html body .session-actions{flex:none!important;position:relative!important;background:var(--ui-panel)!important;padding:12px 0 0!important;margin-top:8px!important}
+html body button{ text-shadow:none!important }
+html body .btn,html body .button,html body .session-actions button,html body .seg button,html body button.chip{display:inline-flex!important;align-items:center!important;justify-content:center!important;line-height:1.5!important;text-align:center!important;border-radius:14px!important;box-sizing:border-box!important}
+html body .back-slot,html body button[onclick="goBack()"]{display:none!important}
+html body .dialog-actions{position:sticky!important;bottom:0!important;flex:none!important;background:var(--ui-panel)!important;padding:12px 0!important;margin:8px 0 0!important}
+</style><style id="screen-repair-v10">@layer sessionWeight{html body,html body *{font-weight:700!important}html body h1,html body h2,html body h3,html body button,html body .h-display,html body .h-screen,html body .word-block,html body .judge-name,html body .verdict,html body .result-title,html body .pass-name{font-weight:900!important}}
+html body{--ui-font:"Zen Kaku Gothic Antique",sans-serif!important}
+html body .word-block{line-height:1.65!important;letter-spacing:.025em!important}
+html body .nani-title-sub{font-size:14px!important;line-height:1.85!important}
+</style><style id="screen-repair-v10">html body .screen{min-height:var(--app-view-h)!important;padding-top:16px!important}html body #titleScreen.active{padding-top:0!important;min-height:var(--app-view-h)!important}html body #talkScreen .wrap{max-width:620px!important}html body #talkScreen h1,html body #talkScreen h2{font-size:24px!important;line-height:1.5!important;margin:0!important}html body #talkScreen .timer{width:126px!important;height:126px!important;margin:12px auto!important}html body #talkScreen .timer-num{font-size:44px!important}html body #talkScreen .panel{padding:14px!important;margin:12px 0!important;border:0!important;border-radius:16px!important}html body #talkScreen .panel-label{margin:0 0 8px!important}html body #talkScreen .pick-sm{min-height:54px!important;padding:8px!important;border-radius:12px!important;box-shadow:none!important}html body #talkScreen .pick-sm .art-person{width:28px!important;height:34px!important}html body #talkScreen .btn-row{gap:8px!important;margin:10px 0 0!important}html body #talkScreen .btn{min-height:44px!important}html body #judgeVerdict,html body #judgeVerdict .verdict{border:0!important;box-shadow:none!important;background:none!important}</style><style id="screen-repair-v10">@layer sessionTypography{html body,html body *{font-family:"Zen Kaku Gothic New",sans-serif!important;font-synthesis:none!important}}@layer sessionWeight{html body,html body *{font-weight:700!important}html body h1,html body h2,html body h3,html body button,html body strong,html body b,html body .word-block,html body .h-display,html body .h-screen,html body .judge-name,html body .verdict,html body .result-title{font-weight:900!important}}html body{--ui-font:"Zen Kaku Gothic New",sans-serif!important}</style><style id="screen-repair-v10">html body{--identity-paper:#27465a;--identity-ink:#fff0d1;--identity-muted:#dfcfb0;}html body .lobby .nrow,html body .setup-names .name-row,html body #name-fields .field,html body #playerList>.player-row,html body #playerList>.p-row,html body .prow:has(input){display:grid!important;grid-template-columns:40px minmax(0,1fr) auto!important;align-items:center!important;gap:12px!important;padding:8px 10px!important;margin:6px 0!important;min-height:70px!important;width:100%!important;box-sizing:border-box!important;background:var(--identity-paper)!important;background-image:none!important;color:var(--identity-ink)!important;border:0!important;border-radius:16px!important;box-shadow:none!important}
+html body .lobby .nrow input,html body .setup-names .name-row input,html body #name-fields .field input,html body #playerList>.player-row input,html body #playerList>.p-row input,html body .prow input{grid-column:2!important;width:100%!important;min-width:0!important;max-width:100%!important;font-size:18px!important;line-height:1.6!important;padding:8px 0!important;margin:0!important;background:none!important;background-image:none!important;color:var(--identity-ink)!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+html body .lobby .nrow input::placeholder,html body .setup-names .name-row input::placeholder,html body #name-fields .field input::placeholder,html body #playerList>.player-row input::placeholder,html body #playerList>.p-row input::placeholder,html body .prow input::placeholder{color:var(--identity-muted)!important;opacity:1!important}
+html body .lobby .nrow .art-person,html body .setup-names .name-row .art-person,html body #name-fields .field .art-person,html body #playerList>.player-row .art-person,html body #playerList>.p-row .art-person,html body .prow .art-person{width:40px!important;height:50px!important;border:0!important;border-radius:9px!important;box-shadow:none!important}
+html body .lobby .nrow .portrait-choice,html body .setup-names .name-row .portrait-choice,html body #name-fields .field .portrait-choice,html body #playerList>.player-row .portrait-choice,html body #playerList>.p-row .portrait-choice,html body .prow .portrait-choice{width:40px!important;height:50px!important;min-width:40px!important;margin:0!important;padding:0!important;border:0!important;border-radius:9px!important;box-shadow:none!important;background:none!important}
+html body .lobby .nrow .portrait-seat,html body .setup-names .name-row .portrait-seat,html body #name-fields .field .portrait-seat,html body #playerList>.player-row .portrait-seat,html body #playerList>.p-row .portrait-seat,html body .prow .portrait-seat{display:none!important}
+html body #app .wrap.lobby .names .nrow input{background:transparent!important;background-image:none!important;color:#283947!important;border:0!important;box-shadow:none!important}
+html body #app .wrap.lobby .names .nrow input::placeholder{color:#5e625c!important;opacity:1!important}
+</style><style id="screen-repair-v10">@media(max-width:699px){
+ html body .session-dialog{padding:16px!important}
+ html body .session-note{margin:8px 0 12px!important;line-height:1.7!important}
+ html body .session-roster{gap:6px!important}
+ html body .session-seat{padding:10px!important;min-height:68px!important;gap:12px!important}
+ html body .session-actions{gap:8px!important;margin-top:10px!important}
+ html body #setupScreen{padding:14px 12px 18px!important}
+ html body #setupScreen .section{margin-top:14px!important;padding-top:14px!important}
+ html body #setupScreen h2{margin:0 0 8px!important}
+ html body #setupScreen .desc{margin:0 0 10px!important;line-height:1.7!important}
+ html body .setup-names{gap:0!important}
+ html body .setup-sheet{padding:16px!important}
+ html body .sec-title{padding:12px 14px 16px!important}
+ html body .nani-title-copy{padding:20px 22px 24px!important}
+}
+</style><script id="screen-scroll-v10">(()=>{
+ let finger=null;
+ const reset=()=>finger=null;
+ document.addEventListener('touchstart',e=>{finger=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY}:null},{passive:true,capture:true});
+ document.addEventListener('touchmove',e=>{
+  if(!finger||e.touches.length!==1)return;
+  const t=e.touches[0],dy=t.clientY-finger.y,dx=t.clientX-finger.x;finger={x:t.clientX,y:t.clientY};
+  if(Math.abs(dy)<=Math.abs(dx)||dy<=0)return;
+  // Cancel only a downward drag beyond the top edge, never an ordinary page scroll.
+  const path=e.composedPath?.()||[];let canMove=false;
+  for(const el of path){if(!(el instanceof Element))continue;
+   const st=getComputedStyle(el),root=el===document.scrollingElement;
+   if((root||/auto|scroll|overlay/.test(st.overflowY))&&el.scrollHeight>el.clientHeight+1){
+    if(el.scrollTop>0){canMove=true;break;}
+    // Keep a scrollable panel at its own top edge on older WebKit as well.
+    if(!root)break;
+   }
+  }
+  if(!canMove&&e.cancelable)e.preventDefault();
+ },{passive:false,capture:true});
+ document.addEventListener('touchend',reset,{passive:true,capture:true});document.addEventListener('touchcancel',reset,{passive:true,capture:true});
+ const bar=document.getElementById('worldToolbar');if(bar)document.body.prepend(bar);
+ if(window.WorldControls?.world==='Dixit'){
+  const old=WorldControls.fit;WorldControls.fit=()=>{old?.();const card=document.querySelector('.reveal-layout .flip');if(!card)return;const view=visualViewport;const top=card.getBoundingClientRect().top-(view?.offsetTop||0),dock=document.getElementById('dockHost');const height=Math.max(90,(view?.height||innerHeight)-top-(dock?.offsetHeight||0)-28);const side=Math.floor(Math.min(260,innerWidth*.64,height*.75));const key=side+'px';if(document.documentElement.style.getPropertyValue('--dixit-flip-width')!==key)document.documentElement.style.setProperty('--dixit-flip-width',key);};
+ }
+ if(window.WorldControls?.world==='secret-hitler')WorldControls.menu=async()=>{
+  const actions=[{label:'遊び方',value:'rules'},{label:'閉じる',value:null,primary:true}];
+  if(document.querySelector('.game-extra [data-act=myrole]'))actions.unshift({label:'自分の役職を確認',value:'myrole'},{label:'ゲームを終了',value:'quit'});
+  const value=await SessionUI.dialog('メニュー','','',actions);if(value==='rules')WorldControls.help();else if(value)document.querySelector('.game-extra [data-act='+value+']')?.click();
+ };
+ requestAnimationFrame(()=>{window.SessionUI?.viewport();window.WorldUI?.sync();});document.fonts?.ready.then(()=>window.WorldUI?.sync());
+})();
+</script></body>
 </html>
