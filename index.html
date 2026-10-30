@@ -658,21 +658,6 @@ b{font-weight:700}
   </div>
 </div>
 
-<!-- ============ ACCUSE PASS ============ -->
-<div id="accusePassScreen" class="screen center">
-  <div class="wrap tc stack-32">
-    <div>
-      <p class="eyebrow" style="color:var(--orange)">Your turn</p>
-      <div class="guest-pass"><div id="accuseGuestPortrait"></div><div class="pass-name" id="accusePassName"></div></div>
-      <p class="sub">さんが指名します</p>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-accent" onclick="onAccusePassReady()">受け取った</button>
-      <button class="btn btn-ghost back-slot" onclick="goBack()">← 一つ前に戻る</button>
-    </div>
-  </div>
-</div>
-
 <!-- ============ ACCUSE ============ -->
 <div id="accuseScreen" class="screen">
   <div class="wrap stack-16">
@@ -1183,20 +1168,11 @@ function toAccuse(){
   clearInterval(timerInterval);
   const majiList = players.filter(p => p !== S.late);
   S.accuser = majiList[(S.gameCount - 1) % majiList.length];
-  step = { t:"accusePass" };
-  renderAccusePass();
-}
-function renderAccusePass(){
-  const h=document.getElementById('accuserRoster');if(h)h.remove();[...document.getElementById('accusePassScreen').children].forEach(e=>e.classList.remove('v5-hidden-handoff'));
-  document.getElementById("accusePassName").textContent = S.accuser;document.getElementById("accuseGuestPortrait").innerHTML=GameArt.person(players.indexOf(S.accuser));
-  showScreen("accusePassScreen");
-}
-function onAccusePassReady(){
-  if(!advanceLock()) return;
-  pushHistory();
   step = { t:"accuse" };
   renderAccuse();
 }
+// Normalize legacy in-memory history to the direct accusation screen.
+function renderAccusePass(){step={t:"accuse"};renderAccuse();}
 function renderAccuse(){
   const remainingMaji = players.filter(p => p !== S.late && !S.eliminated.includes(p));
   if(remainingMaji.length === 0){ startJudge("final"); return; }
@@ -1313,8 +1289,8 @@ function afterJudge(){
   pushHistory();
   if(remainingMaji.length === 0){ startJudge("final"); return; }
   S.accuser = S.judgeTarget;
-  step = { t:"accusePass" };
-  renderAccusePass();
+  step = { t:"accuse" };
+  renderAccuse();
 }
 function toGuess(){
   pushHistory();
