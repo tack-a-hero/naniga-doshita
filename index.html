@@ -937,13 +937,13 @@ function addPlayerRow(name){
   const div = document.createElement("div");
   div.className = "player-row";
   div.innerHTML = '<span class="num"></span>'+
-    '<input type="text" value="'+esc(name)+'" placeholder="名前" oninput="onNameInput(this)">'+
+    '<input type="text" value="'+esc(name)+'" autocomplete="off" oninput="onNameInput(this)">'+
     '<button class="icon-btn" onclick="removePlayer(this)" aria-label="削除">×</button>';
   list.appendChild(div);
   renumber();
 }
 function renumber(){
-  document.querySelectorAll("#playerList .player-row").forEach((r,i)=>{ r.querySelector(".num").innerHTML = GameArt.button(i); });
+  document.querySelectorAll("#playerList .player-row").forEach((r,i)=>{ r.querySelector(".num").innerHTML = GameArt.button(i); const input=r.querySelector("input"); input.placeholder="プレイヤー"+(i+1); input.setAttribute("aria-label",input.placeholder+"の名前"); });
 }
 function removePlayer(btn){
   if(document.querySelectorAll(".player-row").length <= 3){
@@ -978,7 +978,7 @@ function startGame(){
     return;
   }
   setNote("");
-  saveRoster(players);
+  saveRoster(inputs.map(input=>input.value.trim()));
   S.scores = Object.create(null); players.forEach(p => S.scores[p] = 0);
   S.roundHistory = [];
   S.roundNum = 0; S.gameCount = 0;
