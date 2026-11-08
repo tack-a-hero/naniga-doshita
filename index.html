@@ -706,14 +706,14 @@ b{font-weight:700}
       <p class="sub" style="margin-top:6px" id="guessSubText"></p>
     </div>
     <div>
-      <span class="card-cat" style="color:var(--text3)">見えていたカード</span>
-      <div id="seenCard"></div>
+      <span class="card-cat cat-nani"><span class="dot"></span>何が</span>
+      <div id="guessNaniCard"></div>
     </div>
     <div>
-      <span class="card-cat" style="color:var(--text3)">見えていなかったカード</span>
-      <div id="guessHiddenCardWrap" onclick="revealGuessCard()" style="cursor:pointer"></div>
-      <p class="muted" style="margin-top:10px">予想を言ってから、タップで答え合わせ。</p>
+      <span class="card-cat cat-doshita"><span class="dot"></span>どうした</span>
+      <div id="guessDoshitaCard"></div>
     </div>
+    <p class="muted">予想を言ってから、伏せたカードをタップ。</p>
     <div class="btn-row">
       <button class="btn btn-primary" id="guessCorrectBtn" onclick="toResult()" hidden>結果を見る</button>
       <button class="btn btn-ghost" id="guessWrongBtn" onclick="judgeGuess(false)" hidden>不正解</button>
@@ -1323,24 +1323,27 @@ function renderGuess(){
     t.innerHTML = '<small>指名されたのは</small><span>'+esc(S.late)+'</span>';
     s.textContent = "見えていなかったお題を、当てられた？";
   }
-  const seenIsNani = S.lateCard === "nani";
-  document.getElementById("seenCard").innerHTML =
-    '<div class="word word-block '+(seenIsNani?"word-nani":"word-doshita")+'">'+
-    esc(seenIsNani ? naniText(S.nani) : S.doshita)+'</div>';
-  const wrap = document.getElementById("guessHiddenCardWrap");
-  wrap.dataset.type = seenIsNani ? "doshita" : "nani";
-  wrap.dataset.content = seenIsNani ? S.doshita : naniText(S.nani);
-  wrap.innerHTML = '<div class="flip-face flip-front" style="min-height:88px">'+
-    '<span class="lock">タップして答えを見る</span></div>';
+  renderGuessCards();
   showScreen("guessScreen");
+}
+function renderGuessCards(){
+  for(const [type,id] of [["nani","guessNaniCard"],["doshita","guessDoshitaCard"]]){
+    const slot=document.getElementById(id);
+    if(S.guessOpen||S.lateCard===type){
+      const word=type==="nani"?naniText(S.nani):S.doshita;
+      slot.innerHTML='<div class="word word-block word-'+type+'">'+esc(word)+'</div>';
+    }else{
+      slot.innerHTML='<button type="button" class="flip-face flip-front" style="width:100%;min-height:88px" onclick="revealGuessCard()"><span class="lock">タップして答えを見る</span></button>';
+    }
+  }
 }
 function revealGuessCard(){
   if(S.guessOpen) return;
   S.guessOpen = true;
   document.getElementById("guessCorrectBtn").hidden=false;document.getElementById("guessWrongBtn").hidden=true;
   SFX.reveal();
-  const wrap = document.getElementById("guessHiddenCardWrap");
-  wrap.innerHTML = '<div class="word word-block '+(wrap.dataset.type==="nani"?"word-nani":"word-doshita")+'">'+esc(wrap.dataset.content)+'</div>';
+  renderGuessCards();
+  document.getElementById("guessCorrectBtn").focus({preventScroll:true});
 }
 
 /* =========================================================
